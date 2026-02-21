@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>pedroocalado.dao | DeFi Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #0a0a0f;
+      --bg-card: #12121a;
+      --bg-card-hover: #181824;
+      --primary: #00d4aa;
+      --primary-glow: rgba(0, 212, 170, 0.15);
+      --secondary: #6366f1;
+      --accent: #f59e0b;
+      --accent-glow: rgba(245, 158, 11, 0.15);
+      --text-primary: #ffffff;
+      --text-secondary: #9ca3af;
+      --text-muted: #6b7280;
+      --border: #1f1f2e;
+      --border-light: #2a2a3a;
+      --success: #10b981;
+      --danger: #ef4444;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'JetBrains Mono', monospace;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: 
+        radial-gradient(ellipse 80% 50% at 50% -20%, var(--primary-glow), transparent),
+        radial-gradient(ellipse 60% 40% at 100% 100%, rgba(99, 102, 241, 0.08), transparent);
+      pointer-events: none;
+      z-index: -1;
+    }
+
+    .app { max-width: 1200px; margin: 0 auto; padding: 0 20px; display: flex; flex-direction: column; min-height: 100vh; }
+
+    .header { display: flex; justify-content: space-between; align-items: center; padding: 24px 0; border-bottom: 1px solid var(--border); }
+    .logo { display: flex; align-items: center; gap: 12px; }
+    .dao { font-size: 28px; color: var(--primary); text-shadow: 0 0 20px var(--primary-glow); }
+    .domain { font-size: 18px; font-weight: 600; background: linear-gradient(135deg, var(--text-primary), var(--text-secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
+    .connect-btn {
+      background: linear-gradient(135deg, var(--primary), #00b894);
+      border: none; padding: 12px 24px; border-radius: 8px;
+      color: var(--bg-primary); font-family: inherit; font-size: 14px; font-weight: 600;
+      cursor: pointer; transition: all 0.2s ease; box-shadow: 0 4px 15px var(--primary-glow);
+    }
+    .connect-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 25px var(--primary-glow); }
+    .connect-btn.connected { background: var(--bg-card); color: var(--text-primary); border: 1px solid var(--border); box-shadow: none; }
+    .connect-btn.connected:hover { border-color: var(--primary); }
+
+    .main { flex: 1; padding: 32px 0; }
+    .portfolio-section { margin-bottom: 32px; }
+
+    .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 24px; transition: all 0.3s ease; }
+    .card:hover { border-color: var(--border-light); }
+    .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .card h2 { font-size: 16px; font-weight: 500; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px; }
+
+    .network-badge { font-size: 11px; padding: 4px 10px; border-radius: 20px; background: rgba(107, 114, 128, 0.2); color: var(--text-muted); }
+    .network-badge.mainnet { background: rgba(16, 185, 129, 0.15); color: var(--success); }
+
+    .total-value { display: flex; align-items: baseline; gap: 4px; margin-bottom: 16px; }
+    .currency { font-size: 24px; color: var(--text-secondary); }
+    .total-value .value { font-size: 48px; font-weight: 700; background: linear-gradient(135deg, var(--text-primary), var(--primary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
+    .balance-row { display: flex; justify-content: space-between; padding-top: 16px; border-top: 1px solid var(--border); }
+    .balance-row .label { color: var(--text-secondary); font-size: 13px; }
+    .balance-row .value { font-size: 16px; font-weight: 500; color: var(--primary); }
+
+    .grid { display: grid; grid-template-columns: 1fr; gap: 24px; }
+    @media (min-width: 768px) { .grid { grid-template-columns: 1.5fr 1fr; } }
+
+    .refresh-btn { background: transparent; border: 1px solid var(--border); width: 32px; height: 32px; border-radius: 8px; color: var(--text-secondary); cursor: pointer; font-size: 14px; transition: all 0.2s ease; display: flex; align-items: center; justify-content: center; }
+    .refresh-btn:hover { border-color: var(--primary); color: var(--primary); }
+    .refresh-btn.loading { animation: spin 1s linear infinite; }
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+    .token-list { display: flex; flex-direction: column; gap: 12px; }
+    .token-item { display: flex; align-items: center; gap: 12px; padding: 12px; background: var(--bg-primary); border-radius: 12px; border: 1px solid transparent; transition: all 0.2s ease; }
+    .token-item:hover { border-color: var(--border); }
+    .token-icon { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+    .eth-icon { background: linear-gradient(135deg, #627eea, #8c6cf0); color: white; }
+    .token-info { flex: 1; display: flex; flex-direction: column; }
+    .token-name { font-size: 14px; font-weight: 500; }
+    .token-symbol { font-size: 12px; color: var(--text-muted); }
+    .token-values { text-align: right; display: flex; flex-direction: column; }
+    .token-balance { font-size: 14px; font-weight: 500; }
+    .token-value { font-size: 12px; color: var(--text-secondary); }
+
+    .empty-state { text-align: center; padding: 40px 20px; color: var(--text-muted); }
+    .empty-state.hidden { display: none; }
+
+    .gas-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; }
+    .gas-item { background: var(--bg-primary); border-radius: 12px; padding: 16px 12px; text-align: center; border: 1px solid var(--border); transition: all 0.2s ease; }
+    .gas-item:hover { border-color: var(--accent); box-shadow: 0 0 20px var(--accent-glow); }
+    .gas-label { display: block; font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+    .gas-value { display: block; font-size: 24px; font-weight: 700; color: var(--accent); text-shadow: 0 0 15px var(--accent-glow); }
+    .gas-unit { font-size: 11px; color: var(--text-muted); }
+    .gas-info { text-align: center; font-size: 11px; color: var(--text-muted); }
+
+    .footer { display: flex; justify-content: space-between; align-items: center; padding: 20px 0; border-top: 1px solid var(--border); font-size: 12px; color: var(--text-muted); }
+    .status { display: flex; align-items: center; gap: 8px; }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-muted); }
+    .status-dot.online { background: var(--success); box-shadow: 0 0 10px rgba(16, 185, 129, 0.5); }
+    .powered-by a { color: var(--primary); text-decoration: none; }
+    .powered-by a:hover { text-decoration: underline; }
+
+    @media (max-width: 480px) {
+      .header { flex-direction: column; gap: 16px; }
+      .total-value .value { font-size: 36px; }
+      .gas-value { font-size: 18px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="header">
+      <div class="logo">
+        <span class="dao">⎔</span>
+        <span class="domain">pedroocalado.dao</span>
+      </div>
+      <button id="connectBtn" class="connect-btn">Connect Wallet</button>
+    </header>
+
+    <main class="main">
+      <section class="portfolio-section">
+        <div class="card portfolio-card">
+          <div class="card-header">
+            <h2>Portfolio Value</h2>
+            <span class="network-badge" id="networkBadge">Not Connected</span>
+          </div>
+          <div class="total-value">
+            <span class="currency">€</span>
+            <span class="value" id="totalValue">0.00</span>
+          </div>
+          <div class="balance-row">
+            <span class="label">ETH Balance</span>
+            <span class="value" id="ethBalance">0.0000</span>
+          </div>
+        </div>
+      </section>
+
+      <div class="grid">
+        <section class="tokens-section">
+          <div class="card">
+            <div class="card-header">
+              <h2>Token Holdings</h2>
+              <button class="refresh-btn" id="refreshTokens" title="Refresh">↻</button>
+            </div>
+            <div class="token-list">
+              <div class="token-item">
+                <div class="token-icon eth-icon">⟐</div>
+                <div class="token-info">
+                  <span class="token-name">Ethereum</span>
+                  <span class="token-symbol">ETH</span>
+                </div>
+                <div class="token-values">
+                  <span class="token-balance" id="ethHoldings">0.0000 ETH</span>
+                  <span class="token-value" id="ethValue">€0.00</span>
+                </div>
+              </div>
+              <div class="empty-state" id="emptyTokens">
+                <p>Connect wallet to view tokens</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="gas-section">
+          <div class="card">
+            <div class="card-header">
+              <h2>Gas Tracker</h2>
+              <button class="refresh-btn" id="refreshGas" title="Refresh Gas">↻</button>
+            </div>
+            <div class="gas-grid">
+              <div class="gas-item">
+                <span class="gas-label">Slow</span>
+                <span class="gas-value" id="gasSlow">--</span>
+                <span class="gas-unit">Gwei</span>
+              </div>
+              <div class="gas-item">
+                <span class="gas-label">Standard</span>
+                <span class="gas-value" id="gasStandard">--</span>
+                <span class="gas-unit">Gwei</span>
+              </div>
+              <div class="gas-item">
+                <span class="gas-label">Fast</span>
+                <span class="gas-value" id="gasFast">--</span>
+                <span class="gas-unit">Gwei</span>
+              </div>
+            </div>
+            <div class="gas-info">
+              <span class="last-updated">Last updated: <span id="gasTime">--</span></span>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="status">
+        <span class="status-dot" id="statusDot"></span>
+        <span id="statusText">Ready</span>
+      </div>
+      <div class="powered-by">
+        Powered by <a href="https://ethereum.org" target="_blank">Ethereum</a>
+      </div>
+    </footer>
+  </div>
+
+  <script type="module">
+    import { createPublicClient, http, formatEther, formatUnits } from 'https://esm.sh/viem@2.21.0';
+    import { mainnet } from 'https://esm.sh/viem@2.21.0/chains';
+
+    const RPC_URLS = [
+      'https://eth-mainnet.g.alchemy.com/v2/demo',
+      'https://cloudflare-eth.com',
+      'https://ethereum-rpc.publicnode.com'
+    ];
+
+    let client = null;
+    let currentAccount = null;
+    let ethPrice = 2500;
+
+    async function getClient() {
+      if (!client) {
+        for (const url of RPC_URLS) {
+          try {
+            client = createPublicClient({ chain: mainnet, transport: http(url) });
+            await client.getBlockNumber();
+            break;
+          } catch (e) { client = null; }
+        }
+        if (!client) throw new Error('Could not connect to any RPC');
+      }
+      return client;
+    }
+
+    async function fetchEthPrice() {
+      try {
+        const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=eur');
+        const data = await res.json();
+        ethPrice = data.ethereum.eur;
+      } catch (e) { console.error('Price fetch failed:', e); }
+    }
+
+    async function fetchGasPrice() {
+      try {
+        const c = await getClient();
+        const gasPrice = await c.getGasPrice();
+        const gwei = formatUnits(gasPrice, 9);
+        const base = parseFloat(gwei);
+        return { slow: Math.max(1, Math.floor(base * 0.8)), standard: Math.floor(base), fast: Math.ceil(base * 1.3) };
+      } catch (e) { return { slow: 20, standard: 30, fast: 50 }; }
+    }
+
+    function formatAddr(addr) { return addr ? `${addr.slice(0,6)}...${addr.slice(-4)}` : ''; }
+    function formatEth(v) { const n = parseFloat(v); return isNaN(n) ? '0.0000' : n.toFixed(4); }
+    function formatEuro(v) { const n = parseFloat(v); return isNaN(n) ? '0.00' : n.toLocaleString('en-EU', { minimumFractionDigits: 2 }); }
+
+    function updateUI(data) {
+      const { balance, totalValue, gas } = data;
+      document.getElementById('ethBalance').textContent = formatEth(balance);
+      document.getElementById('ethHoldings').textContent = `${formatEth(balance)} ETH`;
+      document.getElementById('totalValue').textContent = formatEuro(totalValue);
+      document.getElementById('ethValue').textContent = `€${formatEuro(totalValue)}`;
+      document.getElementById('gasSlow').textContent = gas.slow;
+      document.getElementById('gasStandard').textContent = gas.standard;
+      document.getElementById('gasFast').textContent = gas.fast;
+      document.getElementById('gasTime').textContent = new Date().toLocaleTimeString();
+      document.getElementById('statusDot').classList.add('online');
+      document.getElementById('statusText').textContent = 'Connected';
+    }
+
+    async function connectWallet() {
+      if (!window.ethereum) return alert('Please install MetaMask!');
+      try {
+        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+        if (accounts.length) {
+          currentAccount = accounts[0];
+          const btn = document.getElementById('connectBtn');
+          btn.classList.add('connected');
+          btn.textContent = formatAddr(currentAccount);
+          btn.onclick = disconnectWallet;
+          await loadWalletData();
+        }
+      } catch (e) { console.error(e); alert('Connection failed'); }
+    }
+
+    function disconnectWallet() {
+      currentAccount = null;
+      const btn = document.getElementById('connectBtn');
+      btn.classList.remove('connected');
+      btn.textContent = 'Connect Wallet';
+      btn.onclick = connectWallet;
+      document.getElementById('totalValue').textContent = '0.00';
+      document.getElementById('ethBalance').textContent = '0.0000';
+      document.getElementById('networkBadge').textContent = 'Not Connected';
+      document.getElementById('networkBadge').classList.remove('mainnet');
+      document.getElementById('statusDot').classList.remove('online');
+      document.getElementById('statusText').textContent = 'Ready';
+    }
+
+    async function loadWalletData() {
+      if (!currentAccount) return;
+      document.getElementById('networkBadge').textContent = 'Ethereum';
+      document.getElementById('networkBadge').classList.add('mainnet');
+      const [balance, price, gas] = await Promise.all([getBalance(), fetchEthPrice(), fetchGasPrice()]);
+      updateUI({ balance, totalValue: balance * price, gas });
+    }
+
+    async function getBalance() {
+      try {
+        const c = await getClient();
+        const bal = await c.getBalance({ address: currentAccount });
+        return parseFloat(formatEther(bal));
+      } catch (e) { return 0; }
+    }
+
+    async function refreshGas() {
+      const btn = document.getElementById('refreshGas');
+      btn.classList.add('loading');
+      const gas = await fetchGasPrice();
+      document.getElementById('gasSlow').textContent = gas.slow;
+      document.getElementById('gasStandard').textContent = gas.standard;
+      document.getElementById('gasFast').textContent = gas.fast;
+      document.getElementById('gasTime').textContent = new Date().toLocaleTimeString();
+      btn.classList.remove('loading');
+    }
+
+    document.getElementById('connectBtn').onclick = connectWallet;
+    document.getElementById('refreshGas').onclick = refreshGas;
+    document.getElementById('refreshTokens').onclick = () => currentAccount && loadWalletData();
+
+    window.ethereum?.on('accountsChanged', (accounts) => {
+      if (!accounts.length) disconnectWallet();
+      else if (accounts[0] !== currentAccount) window.location.reload();
+    });
+
+    refreshGas();
+  </script>
+</body>
+</html>
